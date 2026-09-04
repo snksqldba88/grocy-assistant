@@ -4,11 +4,13 @@ import json
 import requests
 from flask import Flask, request, jsonify, render_template
 from datetime import date, timedelta
+from dotenv import load_dotenv
+
 
 # ============================================================
 # Configuration
 # ============================================================
-
+load_dotenv()
 GROCY_URL = os.environ["GROCY_URL"].rstrip("/")
 GROCY_API_KEY = os.environ["GROCY_API_KEY"]
 
@@ -750,14 +752,30 @@ def parse_inventory_command(message):
 
 def handle_query(message):
     command = message.strip()
-
     lower = command.lower()
 
+    # ========================================================
+    # Help
+    # ========================================================
+
+    if lower in (
+        "help",
+        "?",
+        "commands"
+    ):
+        return help_message()
+
+    # ========================================================
     # All stock
+    # ========================================================
+
     if lower == "stock":
         return format_all_stock()
 
+    # ========================================================
     # Low stock
+    # ========================================================
+
     if lower in (
         "low stock",
         "lowstock",
@@ -765,7 +783,10 @@ def handle_query(message):
     ):
         return format_low_stock()
 
+    # ========================================================
     # Shopping list
+    # ========================================================
+
     if lower in (
         "shopping list",
         "shopping",
@@ -773,23 +794,31 @@ def handle_query(message):
     ):
         return format_shopping_list()
 
-    # Individual product
+    # ========================================================
     # Stock by product or product group
+    # ========================================================
+
     if lower.startswith("stock "):
 
         search_name = command[6:].strip()
 
-    if not search_name:
-        return format_all_stock()
+        if not search_name:
+            return format_all_stock()
 
-    # First check whether the name is a product group.
-    group_result = format_group_stock(search_name)
+        # First check whether this is a product group.
+        group_result = format_group_stock(search_name)
 
-    if group_result is not None:
-        return group_result
+        if group_result is not None:
+            return group_result
 
-    # Otherwise treat it as a product.
-    return format_single_stock(search_name)
+        # Otherwise treat it as an individual product.
+        return format_single_stock(search_name)
+
+    # ========================================================
+    # Not a query
+    # ========================================================
+
+    return None
 
 
 # ============================================================
@@ -798,12 +827,12 @@ def handle_query(message):
 
 def help_message():
     return (
-        "❓ Grocy Assistant Commands\n\n"
-        "Inventory:\n"
-        "+ tomato 1 kg\n"
-        "- tomato 0.3 kg\n\n"
-        "Queries:\n"
-        "stock\n"
+    "❓ Grocy Assistant Commands\n\n"
+    "Inventory:\n"
+    "+ tomato 1 kg\n"
+    "- tomato 0.3 kg\n\n"
+    "Queries:\n"
+    "stock\n"
 	"stock tomato\n"
 	"stock vegetables\n"
 	"stock rice\n"
