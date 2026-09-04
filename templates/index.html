@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Grocy Assistant</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f5f7fa;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+	height: 100dvh;
+	min-height: 100dvh;
+	overflow: hidden;
+    }
+
+    /* Header */
+    header {
+        background: #222;
+        color: white;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        flex-shrink: 0;
+    }
+
+    .header-title {
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .header-subtitle {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-top: 2px;
+    }
+
+    #clear-chat {
+        border: 1px solid #555;
+        background: transparent;
+        color: white;
+        padding: 7px 11px;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    #clear-chat:hover {
+        background: #444;
+    }
+
+    /* Chat */
+    #chat {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 20px;
+        width: 100%;
+        max-width: 950px;
+        margin: 0 auto;
+        scroll-behavior: smooth;
+    }
+
+    .message-row {
+        display: flex;
+        margin-bottom: 16px;
+    }
+
+    .message-row.user {
+        justify-content: flex-end;
+    }
+
+    .message-row.assistant {
+        justify-content: flex-start;
+    }
+
+    .message {
+    max-width: 100%;
+    padding: 11px 14px;
+    border-radius: 14px;
+    white-space: pre-wrap;
+    line-height: 1.45;
+    font-size: 15px;
+    word-wrap: break-word;
+    }
+
+    .message-row > div {
+    max-width: 75%;
+    }
+    
+
+    .message-row.user .message {
+        background: #2563eb;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-row.assistant .message {
+        background: white;
+        color: #222;
+        border: 1px solid #e5e7eb;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .timestamp {
+        font-size: 10px;
+        opacity: 0.55;
+        margin-top: 4px;
+    }
+
+    .message-row.user .timestamp {
+        text-align: right;
+    }
+
+    /* Loading indicator */
+    .typing {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 13px 16px;
+    }
+
+    .typing span {
+        width: 7px;
+        height: 7px;
+        background: #999;
+        border-radius: 50%;
+        animation: typing 1.2s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(2) {
+        animation-delay: 0.15s;
+    }
+
+    .typing span:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    @keyframes typing {
+        0%,
+        60%,
+        100% {
+            transform: translateY(0);
+            opacity: 0.4;
+        }
+
+        30% {
+            transform: translateY(-4px);
+            opacity: 1;
+        }
+    }
+
+    /* Quick actions */
+    #quick-actions {
+        width: 100%;
+        max-width: 950px;
+        margin: 0 auto;
+        padding: 8px 20px 4px;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+    }
+
+    .quick-button {
+        border: 1px solid #d1d5db;
+        background: white;
+        color: #333;
+        padding: 8px 13px;
+        border-radius: 18px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 13px;
+    }
+
+    .quick-button:hover {
+        background: #f0f4ff;
+        border-color: #9db5ff;
+    }
+
+    /* Input */
+    #input-area {
+        background: white;
+        border-top: 1px solid #ddd;
+        padding: 12px 20px;
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        flex-shrink: 0;
+    }
+
+    #input-container {
+        width: 100%;
+        max-width: 950px;
+        margin: 0 auto;
+        display: flex;
+        gap: 10px;
+    }
+
+    #message {
+        flex: 1;
+        padding: 12px 14px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        font-size: 16px;
+        outline: none;
+        min-width: 0;
+    }
+
+    #message:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+
+    #send {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 10px;
+        background: #2563eb;
+        color: white;
+        font-size: 15px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    #send:hover:not(:disabled) {
+        background: #1d4ed8;
+    }
+
+    #send:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+        header {
+            padding: 12px 14px;
+        }
+
+        .header-title {
+            font-size: 18px;
+        }
+
+        #chat {
+            padding: 12px;
+        }
+
+	.message-row > div {
+        max-width: 88%;
+        }
+
+        .message {
+        max-width: 100%;
+        font-size: 14px;
+        }
+
+        #quick-actions {
+            padding: 7px 12px 4px;
+        }
+
+        #input-area {
+            padding: 10px 12px;
+        }
+
+        #send {
+            padding: 11px 15px;
+        }
+    }
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <div>
+        <div class="header-title">🛒 Grocy Assistant</div>
+        <div class="header-subtitle">Your household inventory assistant</div>
+    </div>
+
+    <button id="clear-chat">Clear</button>
+</header>
+
+<div id="chat">
+
+    <div class="message-row assistant">
+        <div>
+            <div class="message">
+                👋 Grocy Assistant ready.
+
+                Try:
+                stock
+                low stock
+                shopping list
+                stock tomato
+                + tomato 1 kg
+                - tomato 0.5 kg
+            </div>
+            <div class="timestamp"></div>
+        </div>
+    </div>
+
+</div>
+
+<div id="quick-actions">
+
+    <button class="quick-button" data-command="stock">
+        📦 Stock
+    </button>
+
+    <button class="quick-button" data-command="low stock">
+        ⚠️ Low Stock
+    </button>
+
+    <button class="quick-button" data-command="shopping list">
+        🛒 Shopping List
+    </button>
+
+</div>
+
+<div id="input-area">
+
+    <div id="input-container">
+
+        <input
+            id="message"
+            type="text"
+            placeholder="Type a Grocy command..."
+            autocomplete="off"
+        >
+
+        <button id="send">
+            Send
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+    const input = document.getElementById("message");
+    const sendButton = document.getElementById("send");
+    const chat = document.getElementById("chat");
+    const clearButton = document.getElementById("clear-chat");
+    const quickButtons = document.querySelectorAll(".quick-button");
+
+    function getTime() {
+        return new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    }
+
+    function addMessage(text, type) {
+        const row = document.createElement("div");
+        row.className = "message-row " + type;
+
+        const wrapper = document.createElement("div");
+
+        const message = document.createElement("div");
+        message.className = "message";
+        message.textContent = text;
+
+        const timestamp = document.createElement("div");
+        timestamp.className = "timestamp";
+        timestamp.textContent = getTime();
+
+        wrapper.appendChild(message);
+        wrapper.appendChild(timestamp);
+        row.appendChild(wrapper);
+
+        chat.appendChild(row);
+
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function showTyping() {
+        const row = document.createElement("div");
+        row.className = "message-row assistant";
+        row.id = "typing-indicator";
+
+        const message = document.createElement("div");
+        message.className = "message typing";
+
+        message.innerHTML = `
+            <span></span>
+            <span></span>
+            <span></span>
+        `;
+
+        row.appendChild(message);
+        chat.appendChild(row);
+
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function removeTyping() {
+        const indicator = document.getElementById("typing-indicator");
+
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    async function sendMessage(command = null) {
+
+        const message = command || input.value.trim();
+
+        if (!message || sendButton.disabled) {
+            return;
+        }
+
+        addMessage(message, "user");
+
+        input.value = "";
+        sendButton.disabled = true;
+
+        showTyping();
+
+        try {
+
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: message
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    "Server returned HTTP " + response.status
+                );
+            }
+
+            const data = await response.json();
+
+            removeTyping();
+
+            addMessage(
+                data.response || "No response received.",
+                "assistant"
+            );
+
+        } catch (error) {
+
+            removeTyping();
+
+            addMessage(
+                "❌ Could not connect to Grocy Assistant.",
+                "assistant"
+            );
+
+            console.error(error);
+
+        } finally {
+
+            sendButton.disabled = false;
+            input.focus();
+
+        }
+    }
+
+    sendButton.addEventListener("click", function () {
+        sendMessage();
+    });
+
+    input.addEventListener("keydown", function (event) {
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessage();
+        }
+
+    });
+
+    quickButtons.forEach(function (button) {
+
+        button.addEventListener("click", function () {
+            sendMessage(button.dataset.command);
+        });
+
+    });
+
+    clearButton.addEventListener("click", function () {
+
+        chat.innerHTML = "";
+
+        addMessage(
+            "👋 Chat cleared. What would you like to check?",
+            "assistant"
+        );
+
+        input.focus();
+
+    });
+
+    input.focus();
+</script>
+
+</body>
+
+</html>

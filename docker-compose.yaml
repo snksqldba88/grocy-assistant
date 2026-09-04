@@ -1,0 +1,15 @@
+services:
+  grocy-assistant:
+    build: .
+    container_name: grocy-assistant
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8086:8080"
+    networks:
+      - ntfy_default
+
+networks:
+  ntfy_default:
+    external: true
