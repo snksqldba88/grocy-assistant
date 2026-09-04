@@ -1,25 +1,51 @@
-import os
+# This is working monolithic version before assistant-layer integration
 import re
 import json
 import requests
 from flask import Flask, request, jsonify, render_template
 from datetime import date, timedelta
-from dotenv import load_dotenv
 
+from config import (
+    GROCY_URL,
+    GROCY_API_KEY,
+    NTFY_URL,
+    NTFY_INPUT_TOPIC,
+    NTFY_RESPONSE_TOPIC,
+    NTFY_USER,
+    NTFY_PASSWORD,
+)
 
-# ============================================================
-# Configuration
-# ============================================================
-load_dotenv()
-GROCY_URL = os.environ["GROCY_URL"].rstrip("/")
-GROCY_API_KEY = os.environ["GROCY_API_KEY"]
+from grocy.api import (
+    grocy_get,
+    grocy_post,
+)
 
-NTFY_URL = os.environ.get("NTFY_URL", "http://ntfy").rstrip("/")
-NTFY_INPUT_TOPIC = os.environ.get("NTFY_INPUT_TOPIC", "grocy-input")
-NTFY_RESPONSE_TOPIC = os.environ.get("NTFY_RESPONSE_TOPIC", "grocy-response")
+from grocy.products import (
+    get_products,
+    find_product,
+)
 
-NTFY_USER = os.environ.get("NTFY_USER")
-NTFY_PASSWORD = os.environ.get("NTFY_PASSWORD")
+from grocy.stock import (
+    change_stock,
+    get_product_stock,
+)
+
+from grocy.groups import (
+    format_group_stock,
+)
+
+from grocy.shopping import (
+    format_shopping_list,
+)
+
+from assistant.parser import (
+    parse_natural_add_command,
+    parse_natural_consume_command,
+    parse_inventory_command,
+    parse_natural_stock_query,
+    is_natural_low_stock_query,
+)
+
 app = Flask(__name__)
 
 # ============================================================
@@ -69,6 +95,40 @@ def chat():
                 "response": result
             })
 
+        # Try natural-language stock addition
+        parsed = parse_natural_add_command(message)
+
+        if parsed:
+            action, product_name, amount, unit = parsed
+
+            result = change_stock(
+                action,
+                product_name,
+                amount,
+                unit
+            )
+
+            return jsonify({
+                "response": result
+            })
+
+        # Try natural-language stock consumption
+        parsed = parse_natural_consume_command(message)
+
+        if parsed:
+            action, product_name, amount, unit = parsed
+
+            result = change_stock(
+                action,
+                product_name,
+                amount,
+                unit
+            )
+
+            return jsonify({
+                "response": result
+            })
+
         # Unknown command
         return jsonify({
             "response": help_message()
@@ -84,33 +144,6 @@ def chat():
 # ============================================================
 # HTTP helpers
 # ============================================================
-
-def grocy_headers():
-    return {
-        "GROCY-API-KEY": GROCY_API_KEY,
-        "Content-Type": "application/json",
-    }
-
-
-def grocy_get(endpoint):
-    response = requests.get(
-        GROCY_URL + endpoint,
-        headers=grocy_headers(),
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def grocy_post(endpoint, body=None):
-    response = requests.post(
-        GROCY_URL + endpoint,
-        headers=grocy_headers(),
-        json=body or {},
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
 
 
 def ntfy_auth():
@@ -140,351 +173,7 @@ def notify(message):
     response.raise_for_status()
 
 
-# ============================================================
-# Grocy product handling
-# ============================================================
 
-def get_products():
-    products = grocy_get("/api/objects/products")
-
-    result = {}
-
-    for product in products:
-        result[product["name"].strip().lower()] = product
-
-    return result
-
-
-def find_product(product_name):
-    products = get_products()
-
-    name = product_name.strip().lower()
-
-    # Exact match
-    if name in products:
-        return products[name]
-
-    # Partial match
-    matches = []
-
-    for product_name_key, product in products.items():
-        if name in product_name_key:
-            matches.append(product)
-
-    if len(matches) == 1:
-        return matches[0]
-
-    if len(matches) > 1:
-        names = ", ".join(p["name"] for p in matches)
-
-        raise ValueError(
-            f"❌ Multiple products match '{product_name}': {names}"
-        )
-
-    return None
-
-
-# ============================================================
-# Unit handling
-# ============================================================
-
-UNIT_ALIASES = {
-    "kg": "kilogram",
-    "kgs": "kilogram",
-    "kilogram": "kilogram",
-    "kilograms": "kilogram",
-
-    "g": "gram",
-    "gm": "gram",
-    "gms": "gram",
-    "gram": "gram",
-    "grams": "gram",
-
-    "lb": "lb",
-    "lbs": "lb",
-    "pound": "lb",
-    "pounds": "lb",
-
-    "oz": "oz",
-    "ounce": "oz",
-    "ounces": "oz",
-
-    "l": "litre",
-    "liter": "litre",
-    "liters": "litre",
-    "litre": "litre",
-    "litres": "litre",
-
-    "gal": "gal",
-    "gallon": "gal",
-    "gallons": "gal",
-
-    "piece": "Piece",
-    "pieces": "Piece",
-    "pc": "Piece",
-    "pcs": "Piece",
-
-    "pack": "Pack",
-    "packs": "Pack",
-
-    "slice": "slice",
-    "slices": "slice",
-
-    "stick": "stick",
-    "sticks": "stick",
-}
-
-
-def normalize_unit(unit):
-    if not unit:
-        return None
-
-    return UNIT_ALIASES.get(unit.strip().lower(), unit.strip())
-
-
-def get_product_stock(product_id):
-    return grocy_get(f"/api/stock/products/{product_id}")
-
-
-def check_unit(product, entered_unit):
-    stock = get_product_stock(product["id"])
-
-    grocy_unit = stock["quantity_unit_stock"]["name"]
-
-    normalized_entered = normalize_unit(entered_unit)
-
-    if normalized_entered != grocy_unit:
-        raise ValueError(
-            f"❌ Unit mismatch for {product['name']}\n\n"
-            f"Grocy stock unit: {grocy_unit}\n"
-            f"You entered: {entered_unit}\n\n"
-            f"Please use: {grocy_unit}"
-        )
-
-    return grocy_unit
-
-
-# ============================================================
-# Add / consume stock
-# ============================================================
-
-def change_stock(action, product_name, amount, unit):
-    product = find_product(product_name)
-
-    if not product:
-        return f"❌ Product not found: {product_name}"
-
-    try:
-        grocy_unit = check_unit(product, unit)
-
-        body = {
-            "amount": amount
-        }
-
-        if action == "add":
-            endpoint = f"/api/stock/products/{product['id']}/add"
-
-            # Set best-before date to the product's normal
-            # shelf-life when Grocy has one.
-            shelf_life = product.get("default_best_before_days", 0) or 0
-
-            if shelf_life > 0:
-                best_before = (
-                    date.today() + timedelta(days=shelf_life)
-                ).isoformat()
-
-                body["best_before_date"] = best_before
-
-        else:
-            endpoint = f"/api/stock/products/{product['id']}/consume"
-
-        grocy_post(endpoint, body)
-
-        stock = get_product_stock(product["id"])
-
-        new_amount = stock["stock_amount_aggregated"]
-
-        if action == "add":
-            action_text = "Added"
-        else:
-            action_text = "Consumed"
-
-        return (
-            f"✅ Grocy updated\n\n"
-            f"{product['name']}\n"
-            f"{action_text}: {amount:g} {grocy_unit}\n"
-            f"New stock: {new_amount:g} {grocy_unit}"
-        )
-
-    except requests.HTTPError as e:
-        try:
-            details = e.response.json()
-            error_message = details.get(
-                "error_message",
-                e.response.text
-            )
-        except Exception:
-            error_message = e.response.text
-
-        return f"❌ Grocy error: {error_message}"
-
-    except Exception as e:
-        return f"❌ Error: {e}"
-
-# ============================================================
-# Product groups
-# ============================================================
-
-def get_product_groups():
-    """
-    Return Grocy product groups indexed by lowercase name.
-    """
-    groups = grocy_get("/api/objects/product_groups")
-
-    result = {}
-
-    for group in groups:
-        name = group.get("name", "").strip()
-
-        if name:
-            result[name.lower()] = group
-
-    return result
-
-
-def find_product_group(group_name):
-    """
-    Find a product group by exact or partial name.
-    """
-
-    groups = get_product_groups()
-
-    name = group_name.strip().lower()
-
-    # Exact match
-    if name in groups:
-        return groups[name]
-
-    # Partial match
-    matches = []
-
-    for group_name_key, group in groups.items():
-        if name in group_name_key:
-            matches.append(group)
-
-    if len(matches) == 1:
-        return matches[0]
-
-    if len(matches) > 1:
-        names = ", ".join(
-            group["name"] for group in matches
-        )
-
-        raise ValueError(
-            f"Multiple product groups match '{group_name}': {names}"
-        )
-
-    return None
-
-
-def format_group_stock(group_name):
-    """
-    Return current stock for all products
-    belonging to a Grocy product group.
-    """
-
-    group = find_product_group(group_name)
-
-    if not group:
-        return None
-
-    group_id = group["id"]
-
-    stock = grocy_get("/api/stock")
-
-    if not stock:
-        return (
-            f"📦 {group['name']}\n\n"
-            "No products are currently in stock."
-        )
-
-    # Get all products so we can determine
-    # each product's product group.
-    products = grocy_get("/api/objects/products")
-
-    group_products = {}
-
-    for product in products:
-        if product.get("product_group_id") == group_id:
-            group_products[product["id"]] = product
-
-    if not group_products:
-        return (
-            f"📦 {group['name']}\n\n"
-            "No products belong to this group."
-        )
-
-    # Quantity units
-    units = grocy_get("/api/objects/quantity_units")
-
-    unit_map = {
-        unit["id"]: unit["name"]
-        for unit in units
-    }
-
-    # Aggregate stock by product
-    stock_by_product = {}
-
-    for item in stock:
-        product_id = item.get("product_id")
-
-        if product_id not in group_products:
-            continue
-
-        amount = item.get(
-            "amount_aggregated",
-            item.get("amount", 0)
-        )
-
-        stock_by_product[product_id] = (
-            stock_by_product.get(product_id, 0) + amount
-        )
-
-    lines = [
-        f"📦 {group['name']}",
-        ""
-    ]
-
-    found_stock = False
-
-    for product_id in sorted(
-        group_products,
-        key=lambda pid: group_products[pid]["name"].lower()
-    ):
-
-        product = group_products[product_id]
-
-        amount = stock_by_product.get(product_id, 0)
-
-        unit = unit_map.get(
-            product.get("qu_id_stock"),
-            ""
-        )
-
-        lines.append(
-            f"• {product['name']}: {amount:g}"
-            + (f" {unit}" if unit else "")
-        )
-
-        found_stock = True
-
-    if not found_stock:
-        return (
-            f"📦 {group['name']}\n\n"
-            "No products are currently in stock."
-        )
-
-    return "\n".join(lines)
 
 # ============================================================
 # Stage 2 - Stock queries
@@ -663,91 +352,11 @@ def format_low_stock():
     return "\n".join(lines)
 
 
-def format_shopping_list():
-    shopping = grocy_get("/api/objects/shopping_list")
-
-    if not shopping:
-        return "🛒 Shopping list is empty."
-
-    lines = ["🛒 Shopping List", ""]
-
-    for item in shopping:
-        product = item.get("product") or {}
-
-        name = product.get(
-            "name",
-            item.get("name", "Unknown")
-        )
-
-        amount = item.get("amount", 1)
-
-        unit = ""
-
-        if product:
-            unit_id = product.get("qu_id_stock")
-
-            if unit_id:
-                try:
-                    units = grocy_get(
-                        "/api/objects/quantity_units"
-                    )
-
-                    unit = next(
-                        (
-                            u["name"]
-                            for u in units
-                            if u["id"] == unit_id
-                        ),
-                        ""
-                    )
-                except Exception:
-                    pass
-
-        if unit:
-            lines.append(
-                f"• {name}: {amount:g} {unit}"
-            )
-        else:
-            lines.append(
-                f"• {name}: {amount:g}"
-            )
-
-    return "\n".join(lines)
-
-
 # ============================================================
-# Command parsing
+# Natural language stock addition
 # ============================================================
 
-def parse_inventory_command(message):
-    """
-    Supported:
 
-    + tomato 1 kg
-    - tomato 0.5 kg
-    """
-
-    pattern = r"^([+-])\s+(.+?)\s+(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*$"
-
-    match = re.match(
-        pattern,
-        message.strip()
-    )
-
-    if not match:
-        return None
-
-    sign = match.group(1)
-    product_name = match.group(2).strip()
-    amount = float(match.group(3))
-    unit = match.group(4).strip()
-
-    if amount <= 0:
-        return None
-
-    action = "add" if sign == "+" else "consume"
-
-    return action, product_name, amount, unit
 
 
 def handle_query(message):
@@ -773,7 +382,7 @@ def handle_query(message):
         return format_all_stock()
 
     # ========================================================
-    # Low stock
+    # Low stock - existing commands
     # ========================================================
 
     if lower in (
@@ -781,6 +390,13 @@ def handle_query(message):
         "lowstock",
         "low"
     ):
+        return format_low_stock()
+
+    # ========================================================
+    # Low stock - natural language
+    # ========================================================
+
+    if is_natural_low_stock_query(command):
         return format_low_stock()
 
     # ========================================================
@@ -795,7 +411,7 @@ def handle_query(message):
         return format_shopping_list()
 
     # ========================================================
-    # Stock by product or product group
+    # Existing stock command
     # ========================================================
 
     if lower.startswith("stock "):
@@ -815,10 +431,32 @@ def handle_query(message):
         return format_single_stock(search_name)
 
     # ========================================================
+    # Natural-language stock query
+    # ========================================================
+
+    search_name = parse_natural_stock_query(command)
+
+    if search_name:
+
+        # First check whether the search term is a
+        # product group.
+        group_result = format_group_stock(search_name)
+
+        if group_result is not None:
+            return group_result
+
+        # Otherwise treat it as an individual product.
+        return format_single_stock(search_name)
+
+    # ========================================================
     # Not a query
     # ========================================================
 
     return None
+
+# ============================================================
+# Natural language stock query parsing
+# ============================================================
 
 
 # ============================================================
@@ -827,17 +465,26 @@ def handle_query(message):
 
 def help_message():
     return (
-    "❓ Grocy Assistant Commands\n\n"
-    "Inventory:\n"
-    "+ tomato 1 kg\n"
-    "- tomato 0.3 kg\n\n"
-    "Queries:\n"
-    "stock\n"
-	"stock tomato\n"
-	"stock vegetables\n"
-	"stock rice\n"
-	"low stock\n"
-	"shopping list"
+        "❓ Grocy Assistant Commands\n\n"
+
+        "Inventory:\n"
+        "+ tomato 1 kg\n"
+        "- tomato 0.3 kg\n\n"
+
+        "Queries:\n"
+        "stock\n"
+        "stock tomato\n"
+        "stock vegetables\n"
+        "stock rice\n"
+        "low stock\n"
+        "shopping list\n\n"
+
+        "You can also ask naturally:\n"
+        "How much tomato do I have?\n"
+        "Do I have rice?\n"
+        "What vegetables do I have?\n"
+        "Show me my spices\n"
+        "What's running low?"
     )
 
 
@@ -937,6 +584,52 @@ def process_message(message):
     # ----------------------------------------
 
     parsed = parse_inventory_command(message)
+
+    if parsed:
+        action, product_name, amount, unit = parsed
+
+        result = change_stock(
+            action,
+            product_name,
+            amount,
+            unit,
+        )
+
+        print(result)
+        print()
+
+        notify(result)
+
+        return
+
+    # ----------------------------------------
+    # Stage 2.2A natural-language stock addition
+    # ----------------------------------------
+
+    parsed = parse_natural_add_command(message)
+
+    if parsed:
+        action, product_name, amount, unit = parsed
+
+        result = change_stock(
+            action,
+            product_name,
+            amount,
+            unit,
+        )
+
+        print(result)
+        print()
+
+        notify(result)
+
+        return
+
+    # ----------------------------------------
+    # Stage 2.2B natural-language consumption
+    # ----------------------------------------
+
+    parsed = parse_natural_consume_command(message)
 
     if parsed:
         action, product_name, amount, unit = parsed
