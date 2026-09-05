@@ -1,4 +1,5 @@
 # This is working monolithic version before assistant-layer integration
+import threading
 import re
 import json
 import requests
@@ -507,6 +508,29 @@ def listen_for_messages():
 # ============================================================
 # Main processing
 # ============================================================
+def process_ntfy_message(message):
+    print(f"Received: {message}")
+
+    try:
+        result = assistant_process_message(message)
+
+        print(result)
+        print()
+
+        notify(result)
+
+    except Exception as e:
+        print(f"ntfy processing error: {e}")
+
+        try:
+            notify(f"❌ Error: {e}")
+        except Exception as notify_error:
+            print(f"ntfy response error: {notify_error}")
+
+
+def ntfy_worker():
+    for message in listen_for_messages():
+        process_ntfy_message(message)
 
 def process_message(message):
     print(f"Received: {message}")
@@ -629,6 +653,12 @@ def main():
             f"ERROR: Could not connect to Grocy: {e}"
         )
         return
+
+    print("Starting ntfy listener...")
+    threading.Thread(
+        target=ntfy_worker,
+        daemon=True
+    ).start()
 
     print("Starting web server...")
     print("Listening on 0.0.0.0:8080")
