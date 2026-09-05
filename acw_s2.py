@@ -46,6 +46,10 @@ from assistant.parser import (
     is_natural_low_stock_query,
 )
 
+from assistant.engine import (
+    process_message as assistant_process_message,
+)
+
 app = Flask(__name__)
 
 # ============================================================
@@ -70,68 +74,10 @@ def chat():
 
         print(f"Web chat: {message}")
 
-        # Try query commands first
-        query_result = handle_query(message)
+        result = assistant_process_message(message)
 
-        if query_result is not None:
-            return jsonify({
-                "response": query_result
-            })
-
-        # Try inventory commands
-        parsed = parse_inventory_command(message)
-
-        if parsed:
-            action, product_name, amount, unit = parsed
-
-            result = change_stock(
-                action,
-                product_name,
-                amount,
-                unit
-            )
-
-            return jsonify({
-                "response": result
-            })
-
-        # Try natural-language stock addition
-        parsed = parse_natural_add_command(message)
-
-        if parsed:
-            action, product_name, amount, unit = parsed
-
-            result = change_stock(
-                action,
-                product_name,
-                amount,
-                unit
-            )
-
-            return jsonify({
-                "response": result
-            })
-
-        # Try natural-language stock consumption
-        parsed = parse_natural_consume_command(message)
-
-        if parsed:
-            action, product_name, amount, unit = parsed
-
-            result = change_stock(
-                action,
-                product_name,
-                amount,
-                unit
-            )
-
-            return jsonify({
-                "response": result
-            })
-
-        # Unknown command
         return jsonify({
-            "response": help_message()
+            "response": result
         })
 
     except Exception as e:
