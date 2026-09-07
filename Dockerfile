@@ -2,9 +2,15 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir requests flask
+COPY requirements.txt .
 
-COPY acw_s2.py .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY assistant ./assistant
+COPY grocy ./grocy
+COPY notifications ./notifications
+COPY config ./config
 COPY templates ./templates
+COPY app.py .
 
-CMD ["python", "-u", "acw_s2.py"]
+CMD ["python", "-u", "app.py"]

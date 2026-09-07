@@ -3,7 +3,7 @@ import time
 
 import requests
 
-from config import (
+from config.config import (
     NTFY_URL,
     NTFY_INPUT_TOPIC,
     NTFY_RESPONSE_TOPIC,

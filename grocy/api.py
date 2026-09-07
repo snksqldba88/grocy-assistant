@@ -1,6 +1,6 @@
 import requests
 
-from config import GROCY_URL, GROCY_API_KEY
+from config.config import GROCY_URL, GROCY_API_KEY
 
 
 # ============================================================

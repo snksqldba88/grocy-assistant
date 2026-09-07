@@ -7,3 +7,9 @@ services:
       - .env
     ports:
       - "8086:8080"
+    networks:
+      - ntfy_default
+
+networks:
+  ntfy_default:
+    external: true
