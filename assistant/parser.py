@@ -321,3 +321,68 @@ def is_natural_low_stock_query(message):
         re.match(pattern, text)
         for pattern in patterns
     )
+
+def parse_shopping_add_command(message):
+    text = message.strip().lower()
+
+    patterns = [
+        r"^add\s+(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|kilogram|g|gram|lb|lbs|pound|pounds|l|litre|liter|gal|gallon|piece|pieces|pack|packs)\s+to\s+shopping\s+list$",
+        r"^add\s+(\d+(?:\.\d+)?)\s*(kg|kilogram|g|gram|lb|lbs|pound|pounds|l|litre|liter|gal|gallon|piece|pieces|pack|packs)\s+(.+?)\s+to\s+shopping\s+list$",
+    ]
+
+    for i, pattern in enumerate(patterns):
+        match = re.match(pattern, text)
+
+        if not match:
+            continue
+
+        if i == 0:
+            product_name = match.group(1)
+            amount = float(match.group(2))
+            unit = match.group(3)
+        else:
+            amount = float(match.group(1))
+            unit = match.group(2)
+            product_name = match.group(3)
+
+        return (
+            "add_shopping",
+            product_name,
+            amount,
+            unit,
+        )
+
+    return None
+
+
+def parse_shopping_remove_command(message):
+    text = message.strip().lower()
+
+    patterns = [
+        r"^remove\s+(.+?)\s+(\d+(?:\.\d+)?)\s*(kg|kilogram|g|gram|lb|lbs|pound|pounds|l|litre|liter|gal|gallon|piece|pieces|pack|packs)\s+from\s+shopping\s+list$",
+        r"^remove\s+(\d+(?:\.\d+)?)\s*(kg|kilogram|g|gram|lb|lbs|pound|pounds|l|litre|liter|gal|gallon|piece|pieces|pack|packs)\s+(.+?)\s+from\s+shopping\s+list$",
+    ]
+
+    for i, pattern in enumerate(patterns):
+        match = re.match(pattern, text)
+
+        if not match:
+            continue
+
+        if i == 0:
+            product_name = match.group(1)
+            amount = float(match.group(2))
+            unit = match.group(3)
+        else:
+            amount = float(match.group(1))
+            unit = match.group(2)
+            product_name = match.group(3)
+
+        return (
+            "remove_shopping",
+            product_name,
+            amount,
+            unit,
+        )
+
+    return None

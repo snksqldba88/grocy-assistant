@@ -36,4 +36,7 @@ def grocy_post(endpoint, body=None):
 
     response.raise_for_status()
 
+    if not response.content:
+        return None
+
     return response.json()

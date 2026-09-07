@@ -1,10 +1,17 @@
 from assistant.parser import (
     parse_natural_stock_query,
     is_natural_low_stock_query,
+    parse_shopping_add_command,
+    parse_shopping_remove_command,
 )
 
 from assistant.inventory import (
     handle_inventory_command,
+)
+
+from grocy.shopping import (
+    add_to_shopping_list,
+    remove_from_shopping_list,
 )
 
 from assistant.queries import (
@@ -34,6 +41,7 @@ def handle_query(message):
     """
 
     text = message.strip().lower()
+
 
     # --------------------------------------------------------
     # Low stock
@@ -87,6 +95,19 @@ def handle_query(message):
 
         return query_product_stock(search_name)
 
+
+    command = parse_shopping_add_command(message)
+
+    if command:
+        _, product_name, amount, unit = command
+        return add_to_shopping_list(product_name, amount)
+
+    command = parse_shopping_remove_command(message)
+
+    if command:
+        _, product_name, amount, unit = command
+        return remove_from_shopping_list(product_name, amount)
+
     # --------------------------------------------------------
     # Natural stock query
     # --------------------------------------------------------
@@ -113,37 +134,66 @@ def handle_query(message):
 # Main assistant engine
 # ============================================================
 
+# def process_message(message):
+#     """
+#     Process a user message and return the appropriate response.
+#
+#     The engine checks inventory commands first, followed by
+#     queries, and finally falls back to the help message.
+#     """
+#
+#     if not message or not message.strip():
+#         return help_message()
+#
+#     # --------------------------------------------------------
+#     # Inventory commands
+#     # --------------------------------------------------------
+#
+#     inventory_result = handle_inventory_command(message)
+#
+#     if inventory_result is not None:
+#         return inventory_result
+#
+#     # --------------------------------------------------------
+#     # Queries
+#     # --------------------------------------------------------
+#
+#     query_result = handle_query(message)
+#
+#     if query_result is not None:
+#         return query_result
+#
+#     # --------------------------------------------------------
+#     # Unknown command
+#     # --------------------------------------------------------
+#
+#     return help_message()
+
+
 def process_message(message):
-    """
-    Process a user message and return the appropriate response.
-
-    The engine checks inventory commands first, followed by
-    queries, and finally falls back to the help message.
-    """
-
     if not message or not message.strip():
         return help_message()
 
-    # --------------------------------------------------------
-    # Inventory commands
-    # --------------------------------------------------------
+    shopping_add = parse_shopping_add_command(message)
+
+    if shopping_add:
+        _, product_name, amount, unit = shopping_add
+        return add_to_shopping_list(product_name, amount)
+
+    shopping_remove = parse_shopping_remove_command(message)
+
+    if shopping_remove:
+        _, product_name, amount, unit = shopping_remove
+        return remove_from_shopping_list(product_name, amount)
 
     inventory_result = handle_inventory_command(message)
 
     if inventory_result is not None:
         return inventory_result
 
-    # --------------------------------------------------------
-    # Queries
-    # --------------------------------------------------------
-
     query_result = handle_query(message)
 
     if query_result is not None:
         return query_result
-
-    # --------------------------------------------------------
-    # Unknown command
-    # --------------------------------------------------------
 
     return help_message()
