@@ -1,7 +1,5 @@
 import threading
-import json
-import requests
-import time
+
 from flask import Flask, request, jsonify, render_template
 
 from config import (
