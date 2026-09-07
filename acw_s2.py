@@ -6,13 +6,12 @@ from flask import Flask, request, jsonify, render_template
 
 from config import (
     GROCY_URL,
-    NTFY_URL,
-    NTFY_INPUT_TOPIC,
-    NTFY_RESPONSE_TOPIC,
-    NTFY_USER,
-    NTFY_PASSWORD,
 )
 
+from notifications.ntfy import (
+    notify,
+    listen_for_messages,
+)
 
 from grocy.products import get_products
 
@@ -56,106 +55,6 @@ def chat():
         return jsonify({
             "response": f"❌ Error: {e}"
         }), 500
-
-# ============================================================
-# HTTP helpers
-# ============================================================
-
-
-def ntfy_auth():
-    if NTFY_USER and NTFY_PASSWORD:
-        return NTFY_USER, NTFY_PASSWORD
-
-    return None
-
-
-def notify(message):
-    """
-    Send response to grocy-response.
-    The assistant does NOT subscribe to this topic.
-    """
-
-    response = requests.post(
-        f"{NTFY_URL}/{NTFY_RESPONSE_TOPIC}",
-        data=message.encode("utf-8"),
-        auth=ntfy_auth(),
-        headers={
-            "Title": "Grocy Assistant",
-            "Content-Type": "text/plain; charset=utf-8",
-        },
-        timeout=30,
-    )
-
-    response.raise_for_status()
-
-# ============================================================
-# ntfy listener
-# ============================================================
-
-def listen_for_messages():
-    """
-    Listen ONLY to grocy-input.
-
-    Responses are sent to grocy-response,
-    so the assistant never receives its own responses.
-    """
-
-    subscribe_url = (
-        f"{NTFY_URL}/"
-        f"{NTFY_INPUT_TOPIC}/json"
-    )
-
-    while True:
-        try:
-            print("Connecting to ntfy...")
-            print(subscribe_url)
-
-            with requests.get(
-                subscribe_url,
-                auth=ntfy_auth(),
-                stream=True,
-                timeout=(30, None),
-            ) as response:
-
-                response.raise_for_status()
-
-                print("Connected to ntfy.")
-                print("Waiting for ntfy messages...")
-                print()
-
-                for line in response.iter_lines(
-                    decode_unicode=True
-                ):
-                    if not line:
-                        continue
-
-                    try:
-                        event = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-
-                    # ntfy sends open/keepalive/message events.
-                    if event.get("event") != "message":
-                        continue
-
-                    message = event.get("message", "").strip()
-
-                    if not message:
-                        continue
-
-                    yield message
-
-        except Exception as e:
-            print(
-                f"ntfy connection error: {e}"
-            )
-
-            print(
-                "Retrying in 5 seconds..."
-            )
-
-            time.sleep(5)
-
 
 # ============================================================
 # Main processing
