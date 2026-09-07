@@ -1,11 +1,11 @@
 import threading
 import json
 import requests
+import time
 from flask import Flask, request, jsonify, render_template
 
 from config import (
     GROCY_URL,
-    GROCY_API_KEY,
     NTFY_URL,
     NTFY_INPUT_TOPIC,
     NTFY_RESPONSE_TOPIC,
@@ -154,7 +154,6 @@ def listen_for_messages():
                 "Retrying in 5 seconds..."
             )
 
-            import time
             time.sleep(5)
 
 
@@ -186,7 +185,7 @@ def ntfy_worker():
         process_ntfy_message(message)
 
 # ============================================================
-# Main - Web Server
+# Application startup
 # ============================================================
 
 def main():
