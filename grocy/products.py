@@ -1,4 +1,4 @@
-from grocy.api import grocy_get
+from grocy.api import grocy_get, grocy_post
 
 
 # ============================================================
@@ -45,3 +45,32 @@ def find_product(product_name):
         )
 
     return None
+
+# ============================================================
+# Grocy product creation
+# ============================================================
+
+def create_product(
+    name,
+    product_group_id,
+    qu_id_purchase,
+    qu_id_stock,
+):
+    """
+    Create a new product in Grocy.
+
+    Returns:
+        Created product response from Grocy.
+    """
+
+    body = {
+        "name": name.strip(),
+        "product_group_id": product_group_id,
+        "qu_id_purchase": qu_id_purchase,
+        "qu_id_stock": qu_id_stock,
+    }
+
+    return grocy_post(
+        "/api/objects/products",
+        body,
+    )
