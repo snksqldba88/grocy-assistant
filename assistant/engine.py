@@ -1,3 +1,12 @@
+from assistant.conversation import ConversationState
+
+from assistant.masterdata import (
+    lookup_product_group,
+    lookup_location,
+    lookup_quantity_unit,
+    add_product,
+)
+
 from assistant.parser import (
     parse_natural_stock_query,
     is_natural_low_stock_query,
@@ -96,17 +105,17 @@ def handle_query(message):
         return query_product_stock(search_name)
 
 
-    command = parse_shopping_add_command(message)
-
-    if command:
-        _, product_name, amount, unit = command
-        return add_to_shopping_list(product_name, amount)
-
-    command = parse_shopping_remove_command(message)
-
-    if command:
-        _, product_name, amount, unit = command
-        return remove_from_shopping_list(product_name, amount)
+    # command = parse_shopping_add_command(message)
+    #
+    # if command:
+    #     _, product_name, amount, unit = command
+    #     return add_to_shopping_list(product_name, amount)
+    #
+    # command = parse_shopping_remove_command(message)
+    #
+    # if command:
+    #     _, product_name, amount, unit = command
+    #     return remove_from_shopping_list(product_name, amount)
 
     # --------------------------------------------------------
     # Natural stock query
@@ -133,46 +142,168 @@ def handle_query(message):
 # ============================================================
 # Main assistant engine
 # ============================================================
-
-# def process_message(message):
-#     """
-#     Process a user message and return the appropriate response.
-#
-#     The engine checks inventory commands first, followed by
-#     queries, and finally falls back to the help message.
-#     """
-#
-#     if not message or not message.strip():
-#         return help_message()
-#
-#     # --------------------------------------------------------
-#     # Inventory commands
-#     # --------------------------------------------------------
-#
-#     inventory_result = handle_inventory_command(message)
-#
-#     if inventory_result is not None:
-#         return inventory_result
-#
-#     # --------------------------------------------------------
-#     # Queries
-#     # --------------------------------------------------------
-#
-#     query_result = handle_query(message)
-#
-#     if query_result is not None:
-#         return query_result
-#
-#     # --------------------------------------------------------
-#     # Unknown command
-#     # --------------------------------------------------------
-#
-#     return help_message()
-
+conversation = ConversationState()
 
 def process_message(message):
     if not message or not message.strip():
         return help_message()
+
+    text = message.strip().lower()
+
+    # --------------------------------------------------------
+    # Active conversation
+    # --------------------------------------------------------
+
+    if conversation.active:
+        if conversation.flow == "add_product":
+
+            if conversation.step == "product_name":
+                conversation.data["name"] = message.strip()
+                conversation.step = "product_group"
+
+                return (
+                    "📦 Product name: "
+                    f"{conversation.data['name']}\n\n"
+                    "Which product group should it belong to?"
+                )
+
+            if conversation.step == "product_group":
+                group = lookup_product_group(message.strip())
+
+                if not group:
+                    return (
+                        f"❌ Product group not found: {message.strip()}\n\n"
+                        "Please enter a valid product group."
+                    )
+
+                conversation.data["product_group_id"] = group["id"]
+                conversation.data["product_group_name"] = group["name"]
+                conversation.step = "location"
+
+                return (
+                    "📁 Product group: "
+                    f"{group['name']}\n\n"
+                    "Which location should it be stored in?"
+                )
+
+            if conversation.step == "location":
+                location = lookup_location(message.strip())
+
+                if not location:
+                    return (
+                        f"❌ Location not found: {message.strip()}\n\n"
+                        "Please enter a valid location."
+                    )
+
+                conversation.data["location_id"] = location["id"]
+                conversation.data["location_name"] = location["name"]
+                conversation.step = "purchase_unit"
+
+                return (
+                    "📍 Location: "
+                    f"{location['name']}\n\n"
+                    "What is the purchase unit?"
+                )
+
+            if conversation.step == "purchase_unit":
+                unit = lookup_quantity_unit(message.strip())
+
+                if not unit:
+                    return (
+                        f"❌ Quantity unit not found: {message.strip()}\n\n"
+                        "Please enter a valid quantity unit."
+                    )
+
+                conversation.data["qu_id_purchase"] = unit["id"]
+                conversation.data["purchase_unit_name"] = unit["name"]
+                conversation.step = "stock_unit"
+
+                return (
+                    "📏 Purchase unit: "
+                    f"{unit['name']}\n\n"
+                    "What is the stock unit?"
+                )
+
+            if conversation.step == "stock_unit":
+                unit = lookup_quantity_unit(message.strip())
+
+                if not unit:
+                    return (
+                        f"❌ Quantity unit not found: {message.strip()}\n\n"
+                        "Please enter a valid quantity unit."
+                    )
+
+                conversation.data["qu_id_stock"] = unit["id"]
+                conversation.data["stock_unit_name"] = unit["name"]
+                conversation.step = "confirmation"
+
+                return (
+                    "📏 Stock unit: "
+                    f"{unit['name']}\n\n"
+                    "Please confirm the product details:\n\n"
+                    f"📦 Product: {conversation.data['name']}\n"
+                    f"📁 Group: {conversation.data['product_group_name']}\n"
+                    f"📍 Location: {conversation.data['location_name']}\n"
+                    f"🛒 Purchase unit: {conversation.data['purchase_unit_name']}\n"
+                    f"📦 Stock unit: {conversation.data['stock_unit_name']}\n\n"
+                    "Create this product? (yes/no)"
+                )
+
+            if conversation.step == "confirmation":
+                if message.strip().lower() in {
+                    "yes",
+                    "y",
+                    "confirm",
+                }:
+                    result = add_product(
+                        name=conversation.data["name"],
+                        product_group_id=conversation.data["product_group_id"],
+                        location_id=conversation.data["location_id"],
+                        qu_id_purchase=conversation.data["qu_id_purchase"],
+                        qu_id_stock=conversation.data["qu_id_stock"],
+                    )
+
+                    product_name = conversation.data["name"]
+
+                    conversation.end()
+
+                    return (
+                        f"✅ Product created successfully!\n\n"
+                        f"📦 {product_name}"
+                    )
+
+                if message.strip().lower() in {
+                    "no",
+                    "n",
+                    "cancel",
+                }:
+                    conversation.end()
+
+                    return (
+                        "❌ Product creation cancelled.\n\n"
+                        "No changes were made to Grocy."
+                    )
+
+                return (
+                    "Please answer with **yes** or **no**."
+                )
+
+    # --------------------------------------------------------
+    # Start product creation
+    # --------------------------------------------------------
+
+    if text in {
+        "add product",
+        "new product",
+        "create product",
+    }:
+        conversation.start("add_product")
+        conversation.step = "product_name"
+
+        return (
+            "📦 Let's create a new product.\n\n"
+            "What is the product name?"
+        )
 
     shopping_add = parse_shopping_add_command(message)
 

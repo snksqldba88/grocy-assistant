@@ -1,4 +1,4 @@
-from grocy.api import grocy_get
+from grocy.api import grocy_get, grocy_post
 
 
 # ============================================================
@@ -168,3 +168,20 @@ def format_group_stock(group_name):
         )
 
     return "\n".join(lines)
+
+def create_product_group(name):
+    """
+    Create a new product group in Grocy.
+
+    Returns:
+        Created product group response from Grocy.
+    """
+
+    body = {
+        "name": name.strip(),
+    }
+
+    return grocy_post(
+        "/api/objects/product_groups",
+        body,
+    )

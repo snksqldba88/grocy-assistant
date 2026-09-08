@@ -52,6 +52,7 @@ def find_product(product_name):
 
 def create_product(
     name,
+    location_id,
     product_group_id,
     qu_id_purchase,
     qu_id_stock,
@@ -65,9 +66,10 @@ def create_product(
 
     body = {
         "name": name.strip(),
-        "product_group_id": product_group_id,
+        "location_id": location_id,
         "qu_id_purchase": qu_id_purchase,
         "qu_id_stock": qu_id_stock,
+        "product_group_id": product_group_id,
     }
 
     return grocy_post(

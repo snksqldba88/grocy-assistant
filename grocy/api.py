@@ -34,6 +34,9 @@ def grocy_post(endpoint, body=None):
         timeout=30,
     )
 
+    if not response.ok:
+        print("Grocy error:", response.text)
+
     response.raise_for_status()
 
     if not response.content:

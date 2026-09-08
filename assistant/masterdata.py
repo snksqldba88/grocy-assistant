@@ -1,5 +1,7 @@
-from grocy.products import find_product
-from grocy.groups import find_product_group
+from grocy.products import find_product, create_product
+from grocy.groups import find_product_group, create_product_group
+from grocy.locations import find_location
+from grocy.units import find_quantity_unit
 
 
 # ============================================================
@@ -17,6 +19,29 @@ def lookup_product(product_name):
     return find_product(product_name)
 
 
+def add_product(
+    name,
+    product_group_id,
+    location_id,
+    qu_id_purchase,
+    qu_id_stock,
+):
+    """
+    Create a new Grocy product.
+
+    Returns:
+        Created product response from Grocy.
+    """
+
+    return create_product(
+        name=name,
+        product_group_id=product_group_id,
+        location_id=location_id,
+        qu_id_purchase=qu_id_purchase,
+        qu_id_stock=qu_id_stock,
+    )
+
+
 # ============================================================
 # Product group lookup
 # ============================================================
@@ -30,6 +55,17 @@ def lookup_product_group(group_name):
     """
 
     return find_product_group(group_name)
+
+
+def add_product_group(name):
+    """
+    Create a new Grocy product group.
+
+    Returns:
+        Created product group response from Grocy.
+    """
+
+    return create_product_group(name)
 
 
 # ============================================================
@@ -87,3 +123,18 @@ def format_product_group_info(group_name):
         f"📁 {group['name']}\n\n"
         f"Group ID: {group['id']}"
     )
+
+def lookup_location(location_name):
+    """
+    Find a Grocy location by exact or partial name.
+    """
+
+    return find_location(location_name)
+
+
+def lookup_quantity_unit(unit_name):
+    """
+    Find a Grocy quantity unit by exact or partial name.
+    """
+
+    return find_quantity_unit(unit_name)
