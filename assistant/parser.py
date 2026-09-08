@@ -255,7 +255,7 @@ def parse_natural_stock_query(message):
         # ----------------------------------------------------
         # What's in X?
         # ----------------------------------------------------
-        r"^what(?:'s| is) in (?:my )?(.+?)\??$",
+        r"^what(?:['’]s| is) in (?:my )?(.+?)\??$",
 
         # ----------------------------------------------------
         # Show me X
@@ -266,12 +266,12 @@ def parse_natural_stock_query(message):
         # ----------------------------------------------------
         # What's my X?
         # ----------------------------------------------------
-        r"^what(?:'s| is) my (.+?)\??$",
+        r"^what(?:['’]s| is) my (.+?)\??$",
 
         # ----------------------------------------------------
         # X stock
         # ----------------------------------------------------
-        r"^what(?:'s| is) (?:my )?(.+?) stock\??$",
+        r"^what(?:['’]s| is) (?:my )?(.+?) stock\??$",
         r"^(.+?) stock\??$",
     ]
 
@@ -306,7 +306,7 @@ def is_natural_low_stock_query(message):
     text = message.strip().lower()
 
     patterns = [
-        r"^what(?:'s|s| is) running low\??$",
+        r"^what(?:['’]s|s| is) running low\??$",
         r"^what is low\??$",
         r"^what items are low\??$",
         r"^which items are low\??$",
