@@ -5,7 +5,14 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'    
+      - 'v*.*.*'
+
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to build
+        required: false
+        type: string   
 
 permissions:
   contents: read
@@ -33,6 +40,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/grocy-assistant
           tags: |
             type=ref,event=tag
+            type=raw,value=${{ inputs.release_tag }},enable=${{ inputs.release_tag != '' }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
 
