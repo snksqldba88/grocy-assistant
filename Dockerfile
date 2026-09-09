@@ -13,4 +13,4 @@ COPY config ./config
 COPY templates ./templates
 COPY app.py .
 
-CMD ["python", "-u", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--access-logfile", "-", "app:app"]
