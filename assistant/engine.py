@@ -6,6 +6,8 @@ from assistant.masterdata import (
     lookup_quantity_unit,
     add_product,
     add_product_group,
+    list_products,
+    list_product_groups,
 )
 
 from assistant.parser import (
@@ -51,6 +53,20 @@ def handle_query(message):
     """
 
     text = message.strip().lower()
+
+    if text in {
+        "products",
+        "list products",
+        "show products",
+    }:
+        return list_products()
+
+    if text in {
+        "product groups",
+        "list product groups",
+        "show product groups",
+    }:
+        return list_product_groups()
 
 
     # --------------------------------------------------------

@@ -56,7 +56,9 @@ def help_message():
         "stock vegetables\n"
         "stock rice\n"
         "low stock\n"
-        "shopping list\n\n"
+        "shopping list\n"
+        "products\n"
+        "product groups\n\n"
 
         "🛠️ Manage:\n"
         "add product\n"

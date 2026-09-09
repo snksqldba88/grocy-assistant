@@ -138,3 +138,53 @@ def lookup_quantity_unit(unit_name):
     """
 
     return find_quantity_unit(unit_name)
+
+
+# ============================================================
+# Product list
+# ============================================================
+
+def list_products():
+    from grocy.products import get_products
+
+    products = get_products()
+
+    if not products:
+        return "📦 No products found."
+
+    names = sorted(
+        product["name"]
+        for product in products.values()
+    )
+
+    lines = ["📦 Products", ""]
+
+    for index, name in enumerate(names, start=1):
+        lines.append(f"{index}. {name}")
+
+    return "\n".join(lines)
+
+
+# ============================================================
+# Product group list
+# ============================================================
+
+def list_product_groups():
+    from grocy.groups import get_product_groups
+
+    groups = get_product_groups()
+
+    if not groups:
+        return "📁 No product groups found."
+
+    names = sorted(
+        group["name"]
+        for group in groups.values()
+    )
+
+    lines = ["📁 Product Groups", ""]
+
+    for index, name in enumerate(names, start=1):
+        lines.append(f"{index}. {name}")
+
+    return "\n".join(lines)
