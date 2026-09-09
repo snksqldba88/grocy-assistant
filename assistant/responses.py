@@ -43,22 +43,26 @@ def no_result(message):
 
 
 def help_message():
-    """
-    Return the assistant help message.
-    """
-
     return (
         "🤖 Grocy Assistant Commands\n\n"
 
-        "Inventory:\n"
+        "📦 Inventory:\n"
         "+ tomato 1 kg\n"
-        "- tomato 0.3 kg\n\n"
+        "- tomato 0.5 kg\n\n"
 
-        "Queries:\n"
+        "🔎 Queries:\n"
         "stock\n"
         "stock tomato\n"
         "stock vegetables\n"
         "stock rice\n"
         "low stock\n"
-        "shopping list"
+        "shopping list\n\n"
+
+        "🛠️ Manage:\n"
+        "add product\n"
+        "new product\n"
+        "create product\n\n"
+
+        "💡 Tip:\n"
+        "You can use natural language for supported queries."
     )
