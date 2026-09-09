@@ -1,5 +1,17 @@
 package com.example.grocyassistant
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,7 +52,6 @@ class MainActivity : ComponentActivity() {
 }
 
 @androidx.compose.runtime.Composable
-
 fun GrocyAssistantScreen() {
 
     var message by remember {
@@ -61,109 +72,234 @@ fun GrocyAssistantScreen() {
 
     val scope = rememberCoroutineScope()
 
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState =
+        androidx.compose.foundation.lazy.rememberLazyListState()
 
-    androidx.compose.runtime.LaunchedEffect(messages.size) {
+    androidx.compose.runtime.LaunchedEffect(messages.size, sending) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.lastIndex)
+            listState.animateScrollToItem(
+                if (sending) messages.size else messages.lastIndex
+            )
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        shape = RoundedCornerShape(24.dp),
+        color = Color.White
     ) {
 
-        Text(
-            text = "Grocy Assistant"
-        )
-
-        androidx.compose.foundation.lazy.LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            state = listState,
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
 
-            items(messages.size) { index ->
-
-                val (sender, text) = messages[index]
-
-                Text(
-                    text = if (sender == "user") {
-                        "You: $text"
-                    } else {
-                        "Assistant: $text"
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-        ) {
-
-            OutlinedTextField(
-                value = message,
-                onValueChange = {
-                    message = it
-                },
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text("Type a message...")
-                },
-                enabled = !sending
+            Text(
+                text = "Grocy Assistant",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = Color(0xFF1976D2)
+                    )
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 14.dp
+                    ),
+                color = Color.White,
+                style = androidx.compose.material3.MaterialTheme.typography.headlineSmall
             )
 
-            Button(
-                onClick = {
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(
+                        top = 8.dp,
+                        bottom = 8.dp
+                    ),
+                state = listState,
+                verticalArrangement =
+                    Arrangement.spacedBy(8.dp)
+            ) {
 
-                    val text = message.trim()
+                items(messages.size) { index ->
 
-                    if (text.isNotEmpty() && !sending) {
+                    val (sender, text) = messages[index]
 
-                        message = ""
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = if (sender == "user") {
+                            Arrangement.End
+                        } else {
+                            Arrangement.Start
+                        }
+                    ) {
 
-                        messages = messages +
-                                ("user" to text)
+                        Text(
+                            text = text,
+                            modifier = Modifier
+                                .background(
+                                    color = if (sender == "user") {
+                                        Color(0xFFE3F2FD)
+                                    } else {
+                                        Color(0xFFF1F1F1)
+                                    },
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(
+                                    horizontal = 16.dp,
+                                    vertical = 10.dp
+                                )
+                        )
+                    }
+                }
 
-                        sending = true
+                if (sending) {
 
-                        scope.launch {
+                    item {
 
-                            try {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
 
-                                val result = sendMessage(text)
-
-                                messages = messages +
-                                        ("assistant" to result)
-
-                            } catch (e: Exception) {
-
-                                messages = messages +
-                                        ("assistant" to "❌ Error: ${e.message}")
-
-                            } finally {
-
-                                sending = false
-                            }
+                            Text(
+                                text = "Sending…",
+                                modifier = Modifier
+                                    .background(
+                                        color = Color(0xFFF1F1F1),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(
+                                        horizontal = 16.dp,
+                                        vertical = 10.dp
+                                    )
+                            )
                         }
                     }
-                },
-                modifier = Modifier.padding(start = 8.dp),
-                enabled = !sending
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = 8.dp,
+                        bottom = 12.dp
+                    ),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Send")
+
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = {
+                        message = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text("Message Grocy Assistant")
+                    },
+                    enabled = !sending,
+                    singleLine = true,
+                    shape = RoundedCornerShape(28.dp),
+                    trailingIcon = {
+
+                        IconButton(
+                            onClick = {
+
+                                val text = message.trim()
+
+                                if (text.isNotEmpty() && !sending) {
+
+                                    message = ""
+
+                                    messages = messages +
+                                            ("user" to text)
+
+                                    sending = true
+
+                                    scope.launch {
+
+                                        try {
+
+                                            val result = sendMessage(text)
+
+                                            messages = messages +
+                                                    ("assistant" to result)
+
+                                        } catch (e: Exception) {
+
+                                            messages = messages +
+                                                    (
+                                                            "assistant" to
+                                                                    "❌ Error: ${e.message}"
+                                                            )
+
+                                        } finally {
+
+                                            sending = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = message.trim().isNotEmpty() && !sending,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(end = 4.dp)
+                        ) {
+
+                            Icon(
+                                imageVector = Icons.Default.ArrowUpward,
+                                contentDescription = "Send"
+                            )
+                        }
+                    },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Send
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSend = {
+
+                            val text = message.trim()
+
+                            if (text.isNotEmpty() && !sending) {
+
+                                message = ""
+
+                                messages = messages +
+                                        ("user" to text)
+
+                                sending = true
+
+                                scope.launch {
+
+                                    try {
+
+                                        val result = sendMessage(text)
+
+                                        messages = messages +
+                                                ("assistant" to result)
+
+                                    } catch (e: Exception) {
+
+                                        messages = messages +
+                                                (
+                                                        "assistant" to
+                                                                "❌ Error: ${e.message}"
+                                                        )
+
+                                    } finally {
+
+                                        sending = false
+                                    }
+                                }
+                            }
+                        }
+                    )
+                )
+            }
             }
         }
     }
-}
 
 suspend fun sendMessage(message: String): String {
 
