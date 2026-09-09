@@ -16,7 +16,18 @@ jobs:
 
     steps:
       - name: Release Please
+        id: release
         uses: release-please-oss/release-please-action@v5
         with:
           release-type: simple
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Docker release build
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run docker.yml \
+            --repo "${{ github.repository }}" \
+            --ref "${{ steps.release.outputs.tag_name }}" \
+            -f release_tag="${{ steps.release.outputs.tag_name }}"
