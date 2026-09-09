@@ -5,6 +5,7 @@ from assistant.masterdata import (
     lookup_location,
     lookup_quantity_unit,
     add_product,
+    add_product_group,
 )
 
 from assistant.parser import (
@@ -287,6 +288,73 @@ def process_message(message):
                 return (
                     "Please answer with **yes** or **no**."
                 )
+
+        if conversation.flow == "add_product_group":
+
+            if conversation.step == "group_name":
+                conversation.data["name"] = message.strip()
+                conversation.step = "group_confirmation"
+
+                return (
+                    "📁 Product group name: "
+                    f"{conversation.data['name']}\n\n"
+                    "Create this product group? (yes/no)"
+                )
+
+            if conversation.flow == "add_product_group":
+
+                if conversation.step == "group_confirmation":
+
+                    if message.strip().lower() in {
+                        "yes",
+                        "y",
+                        "confirm",
+                    }:
+                        result = add_product_group(
+                            conversation.data["name"]
+                        )
+
+                        group_name = conversation.data["name"]
+
+                        conversation.end()
+
+                        return (
+                            "✅ Product group created successfully!\n\n"
+                            f"📁 {group_name}"
+                        )
+
+                    if message.strip().lower() in {
+                        "no",
+                        "n",
+                        "cancel",
+                    }:
+                        conversation.end()
+
+                        return (
+                            "❌ Product group creation cancelled.\n\n"
+                            "No changes were made to Grocy."
+                        )
+
+                    return (
+                        "Please answer with **yes** or **no**."
+                    )
+
+    # --------------------------------------------------------
+    # Start product group creation
+    # --------------------------------------------------------
+
+    if text in {
+        "add product group",
+        "new product group",
+        "create product group",
+    }:
+        conversation.start("add_product_group")
+        conversation.step = "group_name"
+
+        return (
+            "📁 Let's create a new product group.\n\n"
+            "What is the group name?"
+        )
 
     # --------------------------------------------------------
     # Start product creation
