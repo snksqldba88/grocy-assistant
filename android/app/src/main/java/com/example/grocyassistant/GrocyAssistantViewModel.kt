@@ -9,8 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.grocyassistant.assistant.StockQuery
-import com.example.grocyassistant.data.grocy.GrocyStockApi
-import com.example.grocyassistant.data.grocy.GrocyApi
+import com.example.grocyassistant.assistant.StockGroupQuery
 
 class GrocyAssistantViewModel(
     application: Application
@@ -51,6 +50,51 @@ class GrocyAssistantViewModel(
         viewModelScope.launch {
 
             try {
+
+                val lowerText =
+                    text.lowercase()
+
+                if (lowerText.startsWith("stock ")) {
+
+                    val groupName =
+                        text.substringAfter("stock ")
+                            .trim()
+
+                    val groupQuery =
+                        StockGroupQuery(
+                            getApplication<Application>()
+                        )
+
+                    val stock =
+                        groupQuery.findStockByGroup(
+                            groupName
+                        )
+
+                    if (stock.isNotEmpty()) {
+
+                        val result =
+                            buildString {
+
+                                appendLine(
+                                    "Stock in $groupName:"
+                                )
+
+                                appendLine()
+
+                                stock.forEach {
+                                    appendLine(
+                                        "${it.productName}: ${it.amount}"
+                                    )
+                                }
+                            }.trim()
+
+                        _messages.value =
+                            _messages.value +
+                                    ("assistant" to result)
+
+                        return@launch
+                    }
+                }
 
                 val result =
                     repository.sendMessage(text)
@@ -116,6 +160,48 @@ class GrocyAssistantViewModel(
                             (
                                     "assistant" to
                                             "❌ Stock query test error: ${e.message}"
+                                    )
+            }
+        }
+    }
+
+    fun testStockGroupQuery() {
+        viewModelScope.launch {
+            try {
+                val query =
+                    StockGroupQuery(
+                        getApplication<Application>()
+                    )
+
+                val stock =
+                    query.findStockByGroup("vegetables")
+
+                val result =
+                    if (stock.isNotEmpty()) {
+                        buildString {
+                            appendLine("Vegetables stock:")
+                            appendLine()
+
+                            stock.forEach {
+                                appendLine(
+                                    "${it.productName}: ${it.amount}"
+                                )
+                            }
+                        }.trim()
+                    } else {
+                        "No vegetables found in stock."
+                    }
+
+                _messages.value =
+                    _messages.value +
+                            ("assistant" to result)
+
+            } catch (e: Exception) {
+                _messages.value =
+                    _messages.value +
+                            (
+                                    "assistant" to
+                                            "❌ Stock group query test error: ${e.message}"
                                     )
             }
         }

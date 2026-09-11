@@ -8,7 +8,8 @@ data class GrocyStock(
     val productName: String,
     val amount: Double,
     val unitId: Int?,
-    val locationId: Int?
+    val locationId: Int?,
+    val productGroupId: Int?
 )
 
 class GrocyStockApi(
@@ -69,6 +70,10 @@ class GrocyStockApi(
 
                     locationId =
                         product.optString("location_id")
+                            .toIntOrNull(),
+
+                    productGroupId =
+                        product.optString("product_group_id")
                             .toIntOrNull()
                 )
             )

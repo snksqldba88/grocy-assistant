@@ -177,7 +177,7 @@ fun GrocyAssistantScreen(
                         */
             Button(
                 onClick = {
-                    viewModel.testStockQuery()
+                    viewModel.testStockGroupQuery()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,7 +186,7 @@ fun GrocyAssistantScreen(
                         vertical = 4.dp
                     )
             ) {
-                Text("Test Stock Query")
+                Text("Test Stock Group Query")
             }
 
             /*
