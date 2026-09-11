@@ -40,6 +40,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 import com.example.grocyassistant.data.sendMessage
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.runtime.mutableIntStateOf
+//import androidx.compose.runtime.getValue
+//import androidx.compose.runtime.mutableStateOf
+//import androidx.compose.runtime.remember
+//import androidx.compose.runtime.setValue
+import com.example.grocyassistant.settings.SettingsDataStore
+import com.example.grocyassistant.settings.SettingsScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -47,13 +55,37 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            GrocyAssistantScreen()
+            var showSettings by remember {
+                mutableStateOf(false)
+            }
+
+            val settingsDataStore =
+                remember {
+                    SettingsDataStore(applicationContext)
+                }
+
+            if (showSettings) {
+                SettingsScreen(
+                    settingsDataStore = settingsDataStore,
+                    onBack = {
+                        showSettings = false
+                    }
+                )
+            } else {
+                GrocyAssistantScreen(
+                    onSettingsClick = {
+                        showSettings = true
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun GrocyAssistantScreen() {
+fun GrocyAssistantScreen(
+    onSettingsClick: () -> Unit
+) {
 
     var message by remember {
         mutableStateOf("")
@@ -154,8 +186,7 @@ fun GrocyAssistantScreen() {
              *
              * Kept exactly as before.
              */
-            Text(
-                text = "Grocy Assistant",
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
@@ -163,11 +194,28 @@ fun GrocyAssistantScreen() {
                     )
                     .padding(
                         horizontal = 16.dp,
-                        vertical = 14.dp
+                        vertical = 8.dp
                     ),
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Text(
+                    text = "Grocy Assistant",
+                    modifier = Modifier.weight(1f),
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                IconButton(
+                    onClick = onSettingsClick
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.White
+                    )
+                }
+            }
 
             /*
              * Conversation
@@ -341,7 +389,7 @@ fun GrocyAssistantScreen() {
 fun TypingIndicator() {
 
     var dots by remember {
-        mutableStateOf(1)
+        mutableIntStateOf(1)
     }
 
     LaunchedEffect(Unit) {
