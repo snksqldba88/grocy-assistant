@@ -43,6 +43,7 @@ import com.example.grocyassistant.settings.SettingsDataStore
 import com.example.grocyassistant.settings.SettingsScreen
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.Button
 
 class MainActivity : ComponentActivity() {
 
@@ -169,6 +170,23 @@ fun GrocyAssistantScreen(
                         tint = Color.White
                     )
                 }
+            }
+
+            /*
+                        * Temporary stock query test
+                        */
+            Button(
+                onClick = {
+                    viewModel.testStockQuery()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 12.dp,
+                        vertical = 4.dp
+                    )
+            ) {
+                Text("Test Stock Query")
             }
 
             /*

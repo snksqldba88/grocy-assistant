@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.grocyassistant.assistant.StockQuery
 import com.example.grocyassistant.data.grocy.GrocyStockApi
 import com.example.grocyassistant.data.grocy.GrocyApi
 
@@ -70,6 +71,52 @@ class GrocyAssistantViewModel(
             } finally {
 
                 _sending.value = false
+            }
+        }
+    }
+
+    fun testStockQuery() {
+
+        viewModelScope.launch {
+
+            try {
+
+                val query =
+                    StockQuery(
+                        getApplication<Application>()
+                    )
+
+                val stock =
+                    query.findStock("tomato")
+
+                val result =
+                    if (stock != null) {
+
+                        """
+                    Product: ${stock.productName}
+                    Product ID: ${stock.productId}
+                    Amount: ${stock.amount}
+                    Unit ID: ${stock.unitId ?: "Unknown"}
+                    Location ID: ${stock.locationId ?: "Unknown"}
+                    """.trimIndent()
+
+                    } else {
+
+                        "Tomato stock was not found."
+                    }
+
+                _messages.value =
+                    _messages.value +
+                            ("assistant" to result)
+
+            } catch (e: Exception) {
+
+                _messages.value =
+                    _messages.value +
+                            (
+                                    "assistant" to
+                                            "❌ Stock query test error: ${e.message}"
+                                    )
             }
         }
     }
