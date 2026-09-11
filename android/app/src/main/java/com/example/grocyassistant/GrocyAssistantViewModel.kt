@@ -3,7 +3,7 @@ package com.example.grocyassistant
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.grocyassistant.data.sendMessage as sendAssistantMessage
+import com.example.grocyassistant.data.AssistantRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +12,9 @@ import kotlinx.coroutines.launch
 class GrocyAssistantViewModel(
     application: Application
 ) : AndroidViewModel(application) {
+
+    private val repository =
+        AssistantRepository(application.applicationContext)
 
     private val _messages =
         MutableStateFlow(
@@ -47,10 +50,7 @@ class GrocyAssistantViewModel(
             try {
 
                 val result =
-                    sendAssistantMessage(
-                        getApplication<Application>(),
-                        text
-                    )
+                    repository.sendMessage(text)
 
                 _messages.value =
                     _messages.value +
