@@ -13,4 +13,6 @@ COPY config ./config
 COPY templates ./templates
 COPY app.py .
 
+EXPOSE 8080
+
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--access-logfile", "-", "app:app"]
