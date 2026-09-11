@@ -1,6 +1,6 @@
 services:
   grocy-assistant:
-    build: .
+    image: ghcr.io/snksqldba88/grocy-assistant::latest
     container_name: grocy-assistant
     restart: unless-stopped
     env_file:
