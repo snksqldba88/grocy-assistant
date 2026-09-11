@@ -15,8 +15,13 @@ private val Context.dataStore by preferencesDataStore(
 private object SettingsKeys {
     val assistantApiUrl =
         stringPreferencesKey("assistant_api_url")
-}
 
+    val grocyUrl =
+        stringPreferencesKey("grocy_url")
+
+    val grocyApiKey =
+        stringPreferencesKey("grocy_api_key")
+}
 class SettingsDataStore(
     private val context: Context
 ) {
@@ -24,6 +29,16 @@ class SettingsDataStore(
     val assistantApiUrl: Flow<String?> =
         context.dataStore.data.map { preferences ->
             preferences[SettingsKeys.assistantApiUrl]
+        }
+
+    val grocyUrl: Flow<String?> =
+        context.dataStore.data.map { preferences ->
+            preferences[SettingsKeys.grocyUrl]
+        }
+
+    val grocyApiKey: Flow<String?> =
+        context.dataStore.data.map { preferences ->
+            preferences[SettingsKeys.grocyApiKey]
         }
 
     suspend fun saveAssistantApiUrl(
@@ -34,9 +49,37 @@ class SettingsDataStore(
         }
     }
 
+    suspend fun saveGrocyUrl(
+        url: String
+    ) {
+        context.dataStore.edit { preferences ->
+            preferences[SettingsKeys.grocyUrl] = url
+        }
+    }
+
+    suspend fun saveGrocyApiKey(
+        apiKey: String
+    ) {
+        context.dataStore.edit { preferences ->
+            preferences[SettingsKeys.grocyApiKey] = apiKey
+        }
+    }
+
     suspend fun clearAssistantApiUrl() {
         context.dataStore.edit { preferences ->
             preferences.remove(SettingsKeys.assistantApiUrl)
+        }
+    }
+
+    suspend fun clearGrocyUrl() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(SettingsKeys.grocyUrl)
+        }
+    }
+
+    suspend fun clearGrocyApiKey() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(SettingsKeys.grocyApiKey)
         }
     }
 }

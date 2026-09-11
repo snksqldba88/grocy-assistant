@@ -71,4 +71,29 @@ class GrocyAssistantViewModel(
             }
         }
     }
+
+    fun testGrocyConnection(
+        onResult: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val grocyApi =
+                    com.example.grocyassistant.data.grocy.GrocyApi(
+                        getApplication<Application>()
+                    )
+
+                val result =
+                    grocyApi.getSystemInfo()
+
+                onResult(
+                    "Grocy connection successful:\n$result"
+                )
+
+            } catch (e: Exception) {
+                onResult(
+                    "Grocy connection failed:\n${e.message}"
+                )
+            }
+        }
+    }
 }

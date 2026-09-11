@@ -21,13 +21,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.grocyassistant.GrocyAssistantViewModel
 
 @Composable
 fun SettingsScreen(
     settingsDataStore: SettingsDataStore,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: GrocyAssistantViewModel = viewModel()
 ) {
     val scope = rememberCoroutineScope()
 
@@ -35,13 +39,37 @@ fun SettingsScreen(
         mutableStateOf("")
     }
 
+    var grocyUrl by remember {
+        mutableStateOf("")
+    }
+
+    var grocyApiKey by remember {
+        mutableStateOf("")
+    }
+
     var saved by remember {
         mutableStateOf(false)
+    }
+
+    var grocyTestResult by remember {
+        mutableStateOf("")
     }
 
     LaunchedEffect(Unit) {
         settingsDataStore.assistantApiUrl.collect { url ->
             assistantApiUrl = url ?: ""
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        settingsDataStore.grocyUrl.collect { url ->
+            grocyUrl = url ?: ""
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        settingsDataStore.grocyApiKey.collect { apiKey ->
+            grocyApiKey = apiKey ?: ""
         }
     }
 
@@ -51,7 +79,6 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         IconButton(
             onClick = onBack
         ) {
@@ -79,12 +106,49 @@ fun SettingsScreen(
             singleLine = true
         )
 
+        OutlinedTextField(
+            value = grocyUrl,
+            onValueChange = {
+                grocyUrl = it
+                saved = false
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = {
+                Text("Grocy URL")
+            },
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = grocyApiKey,
+            onValueChange = {
+                grocyApiKey = it
+                saved = false
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = {
+                Text("Grocy API Key")
+            },
+            singleLine = true,
+            visualTransformation =
+                PasswordVisualTransformation()
+        )
+
         Button(
             onClick = {
                 scope.launch {
                     settingsDataStore.saveAssistantApiUrl(
                         assistantApiUrl.trim()
                     )
+
+                    settingsDataStore.saveGrocyUrl(
+                        grocyUrl.trim()
+                    )
+
+                    settingsDataStore.saveGrocyApiKey(
+                        grocyApiKey.trim()
+                    )
+
                     saved = true
                 }
             },
@@ -96,6 +160,26 @@ fun SettingsScreen(
         if (saved) {
             Text(
                 text = "Settings saved",
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Button(
+            onClick = {
+                grocyTestResult = "Testing Grocy connection..."
+
+                viewModel.testGrocyConnection { result ->
+                    grocyTestResult = result
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Test Grocy Connection")
+        }
+
+        if (grocyTestResult.isNotEmpty()) {
+            Text(
+                text = grocyTestResult,
                 color = MaterialTheme.colorScheme.primary
             )
         }
