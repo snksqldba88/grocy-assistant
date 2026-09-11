@@ -36,16 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import kotlin.time.Duration.Companion.milliseconds
+import com.example.grocyassistant.data.sendMessage
 
 class MainActivity : ComponentActivity() {
 
@@ -395,64 +389,5 @@ fun TypingIndicator() {
             style =
                 MaterialTheme.typography.bodyLarge
         )
-    }
-}
-
-/*
- * Sends the message to the Grocy Assistant API.
- */
-suspend fun sendMessage(
-    message: String
-): String {
-
-    return withContext(Dispatchers.IO) {
-
-        val client = OkHttpClient()
-
-        val json = JSONObject()
-
-        json.put(
-            "message",
-            message
-        )
-
-        val body =
-            json.toString()
-                .toRequestBody(
-                    "application/json".toMediaType()
-                )
-
-        val request =
-            Request.Builder()
-                .url(
-                    "https://grocy-asst.tail4ee59e.ts.net/api/chat"
-                )
-                .post(body)
-                .build()
-
-        client.newCall(request)
-            .execute()
-            .use { response ->
-
-                if (!response.isSuccessful) {
-
-                    throw Exception(
-                        "HTTP ${response.code}"
-                    )
-                }
-
-                val responseBody =
-                    response.body?.string()
-                        ?: throw Exception(
-                            "Empty response"
-                        )
-
-                val result =
-                    JSONObject(responseBody)
-
-                result.getString(
-                    "response"
-                )
-            }
     }
 }
