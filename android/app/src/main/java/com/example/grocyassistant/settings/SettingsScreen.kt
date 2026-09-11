@@ -163,25 +163,5 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-
-        Button(
-            onClick = {
-                grocyTestResult = "Testing Grocy connection..."
-
-                viewModel.testGrocyConnection { result ->
-                    grocyTestResult = result
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Test Grocy Connection")
-        }
-
-        if (grocyTestResult.isNotEmpty()) {
-            Text(
-                text = grocyTestResult,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
     }
 }
