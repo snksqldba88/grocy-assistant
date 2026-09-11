@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableIntStateOf
 //import androidx.compose.runtime.setValue
 import com.example.grocyassistant.settings.SettingsDataStore
 import com.example.grocyassistant.settings.SettingsScreen
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
 
@@ -86,7 +87,7 @@ class MainActivity : ComponentActivity() {
 fun GrocyAssistantScreen(
     onSettingsClick: () -> Unit
 ) {
-
+    val context = LocalContext.current
     var message by remember {
         mutableStateOf("")
     }
@@ -149,7 +150,10 @@ fun GrocyAssistantScreen(
             try {
 
                 val result =
-                    sendMessage(text)
+                    sendMessage(
+                        context,
+                        text
+                    )
 
                 messages =
                     messages +
