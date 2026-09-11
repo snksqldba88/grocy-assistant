@@ -30,25 +30,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
-import com.example.grocyassistant.data.sendMessage
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.mutableIntStateOf
-//import androidx.compose.runtime.getValue
-//import androidx.compose.runtime.mutableStateOf
-//import androidx.compose.runtime.remember
-//import androidx.compose.runtime.setValue
 import com.example.grocyassistant.settings.SettingsDataStore
 import com.example.grocyassistant.settings.SettingsScreen
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -85,26 +79,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GrocyAssistantScreen(
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    viewModel: GrocyAssistantViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     var message by remember {
         mutableStateOf("")
     }
 
-    var messages by remember {
-        mutableStateOf(
-            listOf(
-                "assistant" to "Hello! I'm Grocy Assistant."
-            )
-        )
-    }
-
-    var sending by remember {
-        mutableStateOf(false)
-    }
-
-    val scope = rememberCoroutineScope()
+    val messages by viewModel.messages.collectAsState()
+    val sending by viewModel.sending.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -131,7 +114,6 @@ fun GrocyAssistantScreen(
      * use this same function.
      */
     fun sendCurrentMessage() {
-
         val text = message.trim()
 
         if (text.isEmpty() || sending) {
@@ -140,39 +122,7 @@ fun GrocyAssistantScreen(
 
         message = ""
 
-        messages =
-            messages + ("user" to text)
-
-        sending = true
-
-        scope.launch {
-
-            try {
-
-                val result =
-                    sendMessage(
-                        context,
-                        text
-                    )
-
-                messages =
-                    messages +
-                            ("assistant" to result)
-
-            } catch (e: Exception) {
-
-                messages =
-                    messages +
-                            (
-                                    "assistant" to
-                                            "❌ Error: ${e.message}"
-                                    )
-
-            } finally {
-
-                sending = false
-            }
-        }
+        viewModel.sendMessage(text)
     }
 
     Surface(
