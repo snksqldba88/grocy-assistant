@@ -1,44 +1,51 @@
 package com.example.grocyassistant
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.foundation.background
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.runtime.rememberCoroutineScope
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
 
@@ -51,7 +58,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@androidx.compose.runtime.Composable
+@Composable
 fun GrocyAssistantScreen() {
 
     var message by remember {
@@ -72,14 +79,69 @@ fun GrocyAssistantScreen() {
 
     val scope = rememberCoroutineScope()
 
-    val listState =
-        androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = rememberLazyListState()
 
-    androidx.compose.runtime.LaunchedEffect(messages.size, sending) {
-        if (messages.isNotEmpty()) {
+    /*
+     * Automatically scroll to the newest message.
+     */
+    LaunchedEffect(messages.size, sending) {
+
+        val itemCount =
+            messages.size + if (sending) 1 else 0
+
+        if (itemCount > 0) {
+
             listState.animateScrollToItem(
-                if (sending) messages.size else messages.lastIndex
+                itemCount - 1
             )
+        }
+    }
+
+    /*
+     * Sends the current message.
+     *
+     * Both the send button and keyboard Send action
+     * use this same function.
+     */
+    fun sendCurrentMessage() {
+
+        val text = message.trim()
+
+        if (text.isEmpty() || sending) {
+            return
+        }
+
+        message = ""
+
+        messages =
+            messages + ("user" to text)
+
+        sending = true
+
+        scope.launch {
+
+            try {
+
+                val result =
+                    sendMessage(text)
+
+                messages =
+                    messages +
+                            ("assistant" to result)
+
+            } catch (e: Exception) {
+
+                messages =
+                    messages +
+                            (
+                                    "assistant" to
+                                            "❌ Error: ${e.message}"
+                                    )
+
+            } finally {
+
+                sending = false
+            }
         }
     }
 
@@ -93,6 +155,11 @@ fun GrocyAssistantScreen() {
             modifier = Modifier.fillMaxSize()
         ) {
 
+            /*
+             * Blue header.
+             *
+             * Kept exactly as before.
+             */
             Text(
                 text = "Grocy Assistant",
                 modifier = Modifier
@@ -105,88 +172,116 @@ fun GrocyAssistantScreen() {
                         vertical = 14.dp
                     ),
                 color = Color.White,
-                style = androidx.compose.material3.MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall
             )
 
-            androidx.compose.foundation.lazy.LazyColumn(
+            /*
+             * Conversation
+             */
+            LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(
-                        top = 8.dp,
+                        top = 12.dp,
                         bottom = 8.dp
                     ),
                 state = listState,
                 verticalArrangement =
-                    Arrangement.spacedBy(8.dp)
+                    Arrangement.spacedBy(6.dp)
             ) {
 
                 items(messages.size) { index ->
 
-                    val (sender, text) = messages[index]
+                    val (sender, text) =
+                        messages[index]
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (sender == "user") {
-                            Arrangement.End
-                        } else {
-                            Arrangement.Start
-                        }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 12.dp,
+                                vertical = 2.dp
+                            ),
+                        horizontalArrangement =
+                            if (sender == "user") {
+                                Arrangement.End
+                            } else {
+                                Arrangement.Start
+                            }
                     ) {
 
                         Text(
                             text = text,
                             modifier = Modifier
+                                .widthIn(
+                                    max = 300.dp
+                                )
                                 .background(
-                                    color = if (sender == "user") {
-                                        Color(0xFFE3F2FD)
-                                    } else {
-                                        Color(0xFFF1F1F1)
-                                    },
-                                    shape = RoundedCornerShape(16.dp)
+                                    color =
+                                        if (sender == "user") {
+                                            Color(0xFF1976D2)
+                                        } else {
+                                            Color(0xFFF1F1F1)
+                                        },
+                                    shape =
+                                        RoundedCornerShape(
+                                            topStart = 18.dp,
+                                            topEnd = 18.dp,
+                                            bottomStart =
+                                                if (sender == "user") {
+                                                    18.dp
+                                                } else {
+                                                    4.dp
+                                                },
+                                            bottomEnd =
+                                                if (sender == "user") {
+                                                    4.dp
+                                                } else {
+                                                    18.dp
+                                                }
+                                        )
                                 )
                                 .padding(
-                                    horizontal = 16.dp,
+                                    horizontal = 14.dp,
                                     vertical = 10.dp
-                                )
+                                ),
+                            color =
+                                if (sender == "user") {
+                                    Color.White
+                                } else {
+                                    Color(0xFF202124)
+                                },
+                            style =
+                                MaterialTheme.typography.bodyLarge
                         )
                     }
                 }
 
+                /*
+                 * Animated typing indicator.
+                 */
                 if (sending) {
 
                     item {
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-
-                            Text(
-                                text = "Sending…",
-                                modifier = Modifier
-                                    .background(
-                                        color = Color(0xFFF1F1F1),
-                                        shape = RoundedCornerShape(16.dp)
-                                    )
-                                    .padding(
-                                        horizontal = 16.dp,
-                                        vertical = 10.dp
-                                    )
-                            )
-                        }
+                        TypingIndicator()
                     }
                 }
             }
 
+            /*
+             * Message composer
+             */
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        top = 8.dp,
-                        bottom = 12.dp
+                        horizontal = 12.dp,
+                        vertical = 10.dp
                     ),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
 
                 OutlinedTextField(
@@ -196,144 +291,168 @@ fun GrocyAssistantScreen() {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
-                        Text("Message Grocy Assistant")
+                        Text(
+                            "Message Grocy Assistant"
+                        )
                     },
                     enabled = !sending,
                     singleLine = true,
-                    shape = RoundedCornerShape(28.dp),
+                    shape =
+                        RoundedCornerShape(28.dp),
+
                     trailingIcon = {
 
                         IconButton(
                             onClick = {
-
-                                val text = message.trim()
-
-                                if (text.isNotEmpty() && !sending) {
-
-                                    message = ""
-
-                                    messages = messages +
-                                            ("user" to text)
-
-                                    sending = true
-
-                                    scope.launch {
-
-                                        try {
-
-                                            val result = sendMessage(text)
-
-                                            messages = messages +
-                                                    ("assistant" to result)
-
-                                        } catch (e: Exception) {
-
-                                            messages = messages +
-                                                    (
-                                                            "assistant" to
-                                                                    "❌ Error: ${e.message}"
-                                                            )
-
-                                        } finally {
-
-                                            sending = false
-                                        }
-                                    }
-                                }
+                                sendCurrentMessage()
                             },
-                            enabled = message.trim().isNotEmpty() && !sending,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .padding(end = 4.dp)
+                            enabled =
+                                message.trim().isNotEmpty() &&
+                                        !sending
                         ) {
 
                             Icon(
-                                imageVector = Icons.Default.ArrowUpward,
-                                contentDescription = "Send"
+                                imageVector =
+                                    Icons.Default.ArrowUpward,
+                                contentDescription =
+                                    "Send"
                             )
                         }
                     },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Send
-                    ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onSend = {
 
-                            val text = message.trim()
+                    keyboardOptions =
+                        KeyboardOptions(
+                            imeAction =
+                                ImeAction.Send
+                        ),
 
-                            if (text.isNotEmpty() && !sending) {
-
-                                message = ""
-
-                                messages = messages +
-                                        ("user" to text)
-
-                                sending = true
-
-                                scope.launch {
-
-                                    try {
-
-                                        val result = sendMessage(text)
-
-                                        messages = messages +
-                                                ("assistant" to result)
-
-                                    } catch (e: Exception) {
-
-                                        messages = messages +
-                                                (
-                                                        "assistant" to
-                                                                "❌ Error: ${e.message}"
-                                                        )
-
-                                    } finally {
-
-                                        sending = false
-                                    }
-                                }
+                    keyboardActions =
+                        KeyboardActions(
+                            onSend = {
+                                sendCurrentMessage()
                             }
-                        }
-                    )
+                        )
                 )
             }
+        }
+    }
+}
+
+/*
+ * Simple animated typing indicator.
+ *
+ * No additional libraries are required.
+ */
+@Composable
+fun TypingIndicator() {
+
+    var dots by remember {
+        mutableStateOf(1)
+    }
+
+    LaunchedEffect(Unit) {
+
+        while (true) {
+
+            delay(400.milliseconds)
+
+            dots = when (dots) {
+                1 -> 2
+                2 -> 3
+                else -> 1
             }
         }
     }
 
-suspend fun sendMessage(message: String): String {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 12.dp,
+                vertical = 2.dp
+            ),
+        horizontalArrangement =
+            Arrangement.Start
+    ) {
+
+        Text(
+            text = "•".repeat(dots),
+            modifier = Modifier
+                .background(
+                    color = Color(0xFFF1F1F1),
+                    shape = RoundedCornerShape(
+                        topStart = 18.dp,
+                        topEnd = 18.dp,
+                        bottomStart = 4.dp,
+                        bottomEnd = 18.dp
+                    )
+                )
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 9.dp
+                ),
+            color = Color(0xFF666666),
+            style =
+                MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+/*
+ * Sends the message to the Grocy Assistant API.
+ */
+suspend fun sendMessage(
+    message: String
+): String {
 
     return withContext(Dispatchers.IO) {
 
         val client = OkHttpClient()
 
         val json = JSONObject()
-        json.put("message", message)
 
-        val body = json.toString()
-            .toRequestBody(
-                "application/json".toMediaType()
-            )
+        json.put(
+            "message",
+            message
+        )
 
-        val request = Request.Builder()
-            .url("https://grocy-asst.tail4ee59e.ts.net/api/chat")
-            .post(body)
-            .build()
+        val body =
+            json.toString()
+                .toRequestBody(
+                    "application/json".toMediaType()
+                )
 
-        client.newCall(request).execute().use { response ->
+        val request =
+            Request.Builder()
+                .url(
+                    "https://grocy-asst.tail4ee59e.ts.net/api/chat"
+                )
+                .post(body)
+                .build()
 
-            if (!response.isSuccessful) {
-                throw Exception(
-                    "HTTP ${response.code}"
+        client.newCall(request)
+            .execute()
+            .use { response ->
+
+                if (!response.isSuccessful) {
+
+                    throw Exception(
+                        "HTTP ${response.code}"
+                    )
+                }
+
+                val responseBody =
+                    response.body?.string()
+                        ?: throw Exception(
+                            "Empty response"
+                        )
+
+                val result =
+                    JSONObject(responseBody)
+
+                result.getString(
+                    "response"
                 )
             }
-
-            val responseBody = response.body?.string()
-                ?: throw Exception("Empty response")
-
-            val result = JSONObject(responseBody)
-
-            result.getString("response")
-        }
     }
 }
